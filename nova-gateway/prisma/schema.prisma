@@ -1,0 +1,116 @@
+// This is your Prisma schema file for Nova Gateway
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User Profile ───────────────────────────────────────────
+model User {
+  id            String   @id @default(uuid())
+  discordId     String   @unique
+  username      String?
+  avatarUrl     String?
+  joinedAt      DateTime @default(now())
+  locale        String   @default("en")
+
+  // Linked wallets
+  tonWallet     String?  @unique
+  baseWallet    String?  @unique
+
+  // Reputation
+  reputationScore Float  @default(0)
+  reputationTier  String @default("Unverified") // Verified, Trusted, Expert, Elite, Legend, Super Nova
+
+  // Verification
+  isVerified    Boolean  @default(false)
+  verifiedAt    DateTime?
+
+  // Relations
+  stats         UserStats?
+  auditLogs     AuditLog[]
+  tickets       Ticket[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ─── User Statistics (aggregated from all chains) ───────────
+model UserStats {
+  id                    String @id @default(uuid())
+  userId                String @unique
+  user                  User   @relation(fields: [userId], references: [id])
+
+  // TON (NovaCont Lite) stats
+  tonEscrowCount        Int    @default(0)
+  tonCompletedCount     Int    @default(0)
+  tonDisputeCount       Int    @default(0)
+  tonTotalVolumeUsd     Float  @default(0)
+
+  // Base (NovaCont) stats
+  baseEscrowCount       Int    @default(0)
+  baseCompletedCount    Int    @default(0)
+  baseDisputeCount      Int    @default(0)
+  baseTotalVolumeUsd    Float  @default(0)
+
+  // Computed totals
+  totalEscrows          Int    @default(0)
+  totalCompleted        Int    @default(0)
+  totalDisputes         Int    @default(0)
+  totalVolumeUsd        Float  @default(0)
+  uniqueCounterparties  Int    @default(0)
+  completionRate        Float  @default(0)
+
+  updatedAt             DateTime @updatedAt
+}
+
+// ─── Audit Log ──────────────────────────────────────────────
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+
+  action      String   // e.g. "WALLET_LINKED", "ROLE_CHANGED", "TICKET_OPENED"
+  details     String?  // JSON string with extra context
+  channelId   String?
+  guildId     String?
+
+  createdAt   DateTime @default(now())
+}
+
+// ─── Support Tickets ────────────────────────────────────────
+model Ticket {
+  id          String   @id @default(uuid())
+  discordId   String
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+
+  subject     String
+  status      String   @default("open") // open, in_progress, closed, archived
+  channelId   String?  // Discord channel created for the ticket
+  closedBy    String?
+  closedAt    DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Platform Analytics (daily snapshots) ───────────────────
+model AnalyticsSnapshot {
+  id                String   @id @default(uuid())
+  date              DateTime @unique
+  totalUsers        Int      @default(0)
+  totalVerified     Int      @default(0)
+  totalEscrows      Int      @default(0)
+  totalVolumeUsd    Float    @default(0)
+  activeUsersDaily  Int      @default(0)
+  topNetwork        String?  // "TON" or "BASE"
+  topCommand        String?
+
+  createdAt         DateTime @default(now())
+}
