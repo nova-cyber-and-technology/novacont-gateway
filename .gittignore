@@ -1,0 +1,23 @@
+node_modules/
+dist/
+build/
+
+# Environment, never commit real tokens or secrets
+.env
+.env.local
+.env.*.local
+
+# SQLite database, contains Discord IDs and wallet addresses
+*.db
+*.db-journal
+prisma/*.db
+prisma/*.db-journal
+
+# Prisma generated client
+prisma/generated/
+
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/
+.idea/
